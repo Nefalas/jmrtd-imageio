@@ -1,0 +1,3 @@
+include ':wsq_imageio'
+include ':jj2000_imageio'
+rootProject.name = "jmrtd-imageio"
