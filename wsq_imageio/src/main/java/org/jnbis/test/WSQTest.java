@@ -32,7 +32,7 @@ public class WSQTest {
 	public void testDecode() {
 		try {
 			File file = new File(WSQ_FILE_IN);
-			Bitmap bitmap = WSQDecoder.decode(new FileInputStream(file));
+			Bitmap bitmap = WSQDecoder.decodeBWM(new FileInputStream(file));
 			System.out.println("bitmap = " + bitmap);
 			BufferedImage image = convert(bitmap);
 			showImage(image);
@@ -45,7 +45,7 @@ public class WSQTest {
 		try {
 			File file = new File(WSQ_FILE_IN);
 			System.out.println("DEBUG: WSQ_FILE_IN length = " + file.length());
-			Bitmap bitmap = WSQDecoder.decode(new FileInputStream(file));
+			Bitmap bitmap = WSQDecoder.decodeBWM(new FileInputStream(file));
 			OutputStream outputStream = new FileOutputStream(WSQ_FILE_OUT);
 			float bitrate = 0.75f;
 //			int depth = 24; /* set it in bitmap */
@@ -56,7 +56,7 @@ public class WSQTest {
 			
 			file = new File(WSQ_FILE_OUT);
 			System.out.println("DEBUG: WSQ_FILE_OUT length = " + file.length());
-			bitmap = WSQDecoder.decode(new FileInputStream(file));
+			bitmap = WSQDecoder.decodeBWM(new FileInputStream(file));
 			System.out.println("bitmap = " + bitmap);
 			BufferedImage image = convert(bitmap);
 			showImage(image);

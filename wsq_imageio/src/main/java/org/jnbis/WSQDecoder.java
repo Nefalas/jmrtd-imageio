@@ -21,6 +21,8 @@
 
 package org.jnbis;
 
+import android.graphics.Bitmap;
+
 import java.io.DataInput;
 import java.io.DataInputStream;
 import java.io.EOFException;
@@ -28,6 +30,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,15 +50,67 @@ import org.jnbis.WSQHelper.Token;
 public class WSQDecoder implements WSQConstants, NISTConstants {
 
 	private static final Logger LOGGER = Logger.getLogger("org.jmrtd");
-	
-	public static BitmapWithMetadata decode(InputStream is) throws IOException {
+
+	public static Bitmap decode(InputStream is) throws IOException {
 		if (is instanceof DataInput)
 			return decode((DataInput)is);
 		else
 			return decode((DataInput)new DataInputStream(is));
 	}
 
-	public static BitmapWithMetadata decode(DataInput dataInput) throws IOException {
+	public static Bitmap decode(DataInput dataInput) throws IOException {
+		Token token = new Token();
+
+		/* Read the SOI marker. */
+		getCMarkerWSQ(dataInput, SOI_WSQ);
+
+		/* Read in supporting tables up to the SOF marker. */
+		int marker = getCMarkerWSQ(dataInput, TBLS_N_SOF);
+		while (marker != SOF_WSQ) {
+			getCTableWSQ(dataInput, token, marker);
+			marker = getCMarkerWSQ(dataInput, TBLS_N_SOF);
+		}
+
+		/* Read in the Frame Header. */
+		WSQHelper.HeaderFrm frmHeaderWSQ = getCFrameHeaderWSQ(dataInput);
+		int width = frmHeaderWSQ.width;
+		int height = frmHeaderWSQ.height;
+
+		/* Build WSQ decomposition trees. */
+		WSQHelper.buildWSQTrees(token, width, height);
+
+		/* Decode the Huffman encoded buffer blocks. */
+		int[] qdata = huffmanDecodeDataMem(dataInput, token, width * height);
+
+		/* Decode the quantize wavelet subband buffer. */
+		float[] fdata = unquantize(token, qdata, width, height);
+
+		wsqReconstruct(token, fdata, width, height);
+
+		/* Convert floating point pixels to unsigned char pixels. */
+		byte[] cdata = convertImageToByte(fdata, width, height, frmHeaderWSQ.mShift, frmHeaderWSQ.rScale);
+
+		Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+		ByteBuffer buffer = ByteBuffer.allocate(bitmap.getByteCount());
+		for (byte source : cdata) {
+			buffer.put(source);
+			buffer.put(source);
+			buffer.put(source);
+			buffer.put((byte) -1);
+		}
+		bitmap.copyPixelsFromBuffer(buffer);
+
+		return bitmap;
+	}
+	
+	public static BitmapWithMetadata decodeBWM(InputStream is) throws IOException {
+		if (is instanceof DataInput)
+			return decodeBWM((DataInput)is);
+		else
+			return decodeBWM((DataInput)new DataInputStream(is));
+	}
+
+	public static BitmapWithMetadata decodeBWM(DataInput dataInput) throws IOException {
 		Token token = new Token();
 
 		/* Read the SOI marker. */
